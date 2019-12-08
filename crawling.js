@@ -94,7 +94,7 @@ let prev = [];
 const funcodeforces = async function() {
     idxc += 1;
     if(idxc < user_list.length) {
-        console.log(idxc + ' ' + user_list[idxc].codeforces_id + ' codeforces');
+        console.log(user_list[idxc].nickname + ' codeforces');
         let page = 0;
         prev = [];
         const funcpage = async function(cp) {
@@ -189,18 +189,20 @@ const funcodeforces = async function() {
 
 
 db.once('open', () => {
-    model.user.find({}).then(result => {
-        user_list = result;
+    setInterval(() => {
+        model.user.find({}).then(result => {
+            user_list = result;
 
-        //idxs = -1;
-        //funspoj(s).catch(err => { console.log(err); });
+            idxs = -1;
+            funspoj(s).catch(err => { console.log(err); });
 
-        //idxb = -1;
-        //funboj(b).catch(err => { console.log(err); });
+            idxb = -1;
+            funboj(b).catch(err => { console.log(err); });
 
-        idxc = -1;
-        funcodeforces().catch(err => { console.log(err); });
-    }).catch(err => {
-        console.log(err);
-    });
+            idxc = -1;
+            funcodeforces().catch(err => { console.log(err); });
+        }).catch(err => {
+            console.log(err);
+        });
+    }, 86400000);
 });
