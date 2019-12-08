@@ -20,6 +20,10 @@ let idxs = -1;
 const funspoj = async function(s) {
     idxs += 1;
     if(idxs < user_list.length) {
+        if(user_list[idxs].spoj_id === undefined || user_list[idxs].spoj_id === '') {
+            funboj(b).catch(err => { console.log(err) });
+            return;
+        }
         s.queue(`https://www.spoj.com/users/${user_list[idxs].spoj_id}`);
     }
 };
@@ -54,6 +58,10 @@ let idxb = -1;
 const funboj = async function(b) {
     idxb += 1;
     if(idxb < user_list.length) {
+        if(user_list[idxb].boj_id === undefined || user_list[idxb].boj_id === '') {
+            funboj(b).catch(err => { console.log(err) });
+            return;
+        }
         b.queue(`https://www.acmicpc.net/user/${user_list[idxb].boj_id}`);
     }
 };
@@ -94,6 +102,10 @@ let prev = [];
 const funcodeforces = async function() {
     idxc += 1;
     if(idxc < user_list.length) {
+        if(user_list[idxc].codeforces_id === undefined || user_list[idxc].codeforces_id === '') {
+            funcodeforces().catch(err => { console.log(err); });
+            return;
+        }
         console.log(user_list[idxc].nickname + ' codeforces');
         let page = 0;
         prev = [];
@@ -189,7 +201,7 @@ const funcodeforces = async function() {
 
 
 db.once('open', () => {
-    setInterval(() => {
+    //setInterval(() => {
         model.user.find({}).then(result => {
             user_list = result;
 
@@ -204,5 +216,5 @@ db.once('open', () => {
         }).catch(err => {
             console.log(err);
         });
-    }, 86400000);
+    //}, 86400000);
 });
