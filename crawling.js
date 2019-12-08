@@ -88,15 +88,118 @@ const b = new Crawler({
 
 
 
+let idxc = -1;
+let prev = [];
+
+const funcodeforces = async function() {
+    idxc += 1;
+    if(idxc < user_list.length) {
+        console.log(idxc + ' ' + user_list[idxc].codeforces_id + ' codeforces');
+        let page = 0;
+        prev = [];
+        const funcpage = async function(cp) {
+            page += 1;
+            cp.queue(`https://codeforces.com/submissions/${user_list[idxc].codeforces_id}/page/${page}`);
+        };
+
+        const cp = new Crawler({
+            rateLimit: 1000,
+
+            // This will be called for each crawled page
+            callback: function (error, res, done) {
+                if (error) {
+                    console.log(error);
+                } else {
+                    const $ = res.$;
+                    const arr = [];
+                    const brr = [];
+                    const crr = [];
+                    const drr = [];
+                    console.log(page);
+                    $('.status-frame-datatable tr').each(function(idx) {
+                        if(idx === 0) return;
+                        let obj = { problem_number: '', oj_id: user_list[idxc].codeforces_id, oj: 'codeforces', pending_link: ''};
+                        $(this).find('td').each(function(idx) {
+                            if($(this).text().trim() === '') return;
+                            if(idx === 0) {
+                                obj.pending_link = $(this).text().trim();
+                            }
+                            if(idx === 3) {
+                                let tmp = '';
+                                $(this).find('a')[0].attribs.href.split('/').map((val) => {
+                                    if(val === 'gym') crr.push('gym');
+                                    else if(val === 'contest') crr.push('contest');
+                                    else if(val !== 'problem' && val !== '') {
+                                        if(tmp === '') brr.push(val);
+                                        tmp = tmp.concat(val);
+                                    }
+                                });
+                                obj.problem_number = 'codeforces/' + tmp;
+                            }
+                            if(idx === 5) {
+                                drr.push($(this).text().trim());
+                            }
+                        });
+                        obj.pending_link = `https://codeforces.com/contest/${brr[idx - 1]}/submission/${obj.pending_link}`;
+                        arr.push(obj);
+                    });
+
+                    if(arr.length > 0 && prev.length > 0 && arr[0].pending_link === prev[0].pending_link) {
+                        funcodeforces().catch(err => { console.log(err); });
+                    }
+                    else if(arr.length === 0) {
+                        funcodeforces().catch(err => { console.log(err); });
+                    }
+                    else {
+                        prev = arr;
+
+                        const addAccept = async function(obj) {
+                            model.outJudgeResult.findOne({problem_number: obj.problem_number, oj_id: obj.oj_id})
+                                .then(result => {
+                                    if(result === null) return model.outJudgeResult.create(obj);
+                                    else if(parseInt(result.pending_link.split('/')[result.pending_link.split('/').length - 1]) <
+                                        parseInt(obj.pending_link.split('/')[obj.pending_link.split('/').length - 1])) {
+                                        return model.outJudgeResult.updateOne({
+                                            problem_number: obj.problem_number,
+                                            oj_id: obj.oj_id
+                                        });
+                                    }
+                                }).catch(err => {
+
+                            })
+                        };
+
+                        for(let i = 0; i < arr.length; i++) {
+                            if(drr[i] !== 'Accepted') continue;
+                            if(crr[i] !== 'contest') continue;
+                            addAccept(arr[i]).catch(err => { console.log(err); });
+                        }
+                        funcpage(cp).catch(err => { console.log(err); });
+                    }
+                }
+                done();
+            }
+        });
+
+        funcpage(cp).catch(err => { console.log(err); });
+    }
+};
+
+
+
+
 db.once('open', () => {
     model.user.find({}).then(result => {
         user_list = result;
-        
+
         //idxs = -1;
         //funspoj(s).catch(err => { console.log(err); });
 
-        idxb = -1;
-        funboj(b).catch(err => { console.log(err); });
+        //idxb = -1;
+        //funboj(b).catch(err => { console.log(err); });
+
+        idxc = -1;
+        funcodeforces().catch(err => { console.log(err); });
     }).catch(err => {
         console.log(err);
     });
