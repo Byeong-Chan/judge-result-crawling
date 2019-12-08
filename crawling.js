@@ -201,7 +201,7 @@ const funcodeforces = async function() {
 
 
 db.once('open', () => {
-    //setInterval(() => {
+    setInterval(() => {
         model.user.find({}).then(result => {
             user_list = result;
 
@@ -216,5 +216,5 @@ db.once('open', () => {
         }).catch(err => {
             console.log(err);
         });
-    //}, 86400000);
+    }, 86400000);
 });
