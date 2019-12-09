@@ -23,12 +23,10 @@ const insertMongo = async function() {
         if(qidx < queue.length) insertMongo().catch(err=>{console.log(err)});
     }).catch(err => {
         console.log(err);
-        model.outJudgeResult.updateOne({problem_number: obj.problem_number},
+        model.outJudgeResult.updateOne({problem_number: obj.problem_number, oj_id: obj.oj_id, oj: obj.oj},
             {
                 $set: {
-                    problem_solver: obj.problem_solver,
-                    problem_rating: obj.problem_rating,
-                    Category: obj.Category
+                    pending_link: obj.pending_link,
                 }
             }).then(result=> {
             if(qidx < queue.length) insertMongo().catch(err=>{console.log(err)});
