@@ -56,7 +56,7 @@ const funspoj = async function(s) {
     idxs += 1;
     if(idxs < user_list.length) {
         if(user_list[idxs].spoj_id === undefined || user_list[idxs].spoj_id === '') {
-            funboj(b).catch(err => { console.log(err) });
+            funspoj(s).catch(err => { console.log(err) });
             return;
         }
         s.queue(`https://www.spoj.com/users/${user_list[idxs].spoj_id}`);
