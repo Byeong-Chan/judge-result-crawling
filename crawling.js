@@ -13,6 +13,43 @@ db.on('error', console.error);
 const model = require('./model');
 const Crawler = require('crawler');
 
+let qidx = 0;
+const queue = [];
+
+const insertMongo = async function() {
+    qidx++;
+    const obj = queue[qidx - 1];
+    model.outJudgeResult.create(obj).then(result => {
+        if(qidx < queue.length) insertMongo().catch(err=>{console.log(err)});
+    }).catch(err => {
+        console.log(err);
+        model.outJudgeResult.updateOne({problem_number: obj.problem_number},
+            {
+                $set: {
+                    problem_solver: obj.problem_solver,
+                    problem_rating: obj.problem_rating,
+                    Category: obj.Category
+                }
+            }).then(result=> {
+            if(qidx < queue.length) insertMongo().catch(err=>{console.log(err)});
+        }).catch(err =>{
+            console.log(err);
+            if(qidx < queue.length) insertMongo().catch(err=>{console.log(err)});
+        })
+    })
+};
+
+const queueing = async function(obj) {
+    if(queue.length === qidx) {
+        queue.push(obj);
+        return insertMongo();
+    }
+    else {
+        queue.push(obj);
+    }
+};
+
+
 let user_list = [];
 
 
@@ -43,7 +80,7 @@ const s = new Crawler({
                 obj.pending_link = 'https://www.spoj.com' + $(this)[0].attribs.href;
                 obj.problem_number = 'spoj/' + $(this).text().trim();
 
-                model.outJudgeResult.create(obj).catch(err => {});
+                queueing(obj).catch(err => {console.log(err)});
             });
             console.log(user_list[idxs].nickname + ' spoj');
             funspoj(s).catch(err => {console.log(err);});
@@ -77,19 +114,24 @@ const b = new Crawler({
         } else {
             const $ = res.$;
             $('.problem_number a').each(function(idx) {
-                if($(this).parent().parent().prev().text().trim() !== '푼 문제') return;
-                if($(this).text().trim() === '') return;
-                const obj = { problem_number: `boj/${$(this).text().trim()}`,
-                                oj_id: user_list[idxb].boj_id,
-                                oj: 'boj',
-                                pending_link: ''};
+                if ($(this).parent().parent().prev().text().trim() !== '푼 문제') return;
+                if ($(this).text().trim() === '') return;
+                const obj = {
+                    problem_number: `boj/${$(this).text().trim()}`,
+                    oj_id: user_list[idxb].boj_id,
+                    oj: 'boj',
+                    pending_link: ''
+                };
                 obj.pending_link = `https://www.acmicpc.net/status?problem_id=${$(this).text().trim()}&user_id=${obj.oj_id}&language_id=-1&result_id=-1`;
-                model.outJudgeResult.create(obj).catch(err => {});
+
+                queueing(obj).catch(err => {
+                    console.log(err);
+                });
             });
 
             console.log(user_list[idxb].nickname + ' boj');
             funboj(b).catch(err => {console.log(err);});
-        }
+        };
         done();
     }
 });
@@ -165,26 +207,10 @@ const funcodeforces = async function() {
                     else {
                         prev = arr;
 
-                        const addAccept = async function(obj) {
-                            model.outJudgeResult.findOne({problem_number: obj.problem_number, oj_id: obj.oj_id})
-                                .then(result => {
-                                    if(result === null) return model.outJudgeResult.create(obj);
-                                    else if(parseInt(result.pending_link.split('/')[result.pending_link.split('/').length - 1]) <
-                                        parseInt(obj.pending_link.split('/')[obj.pending_link.split('/').length - 1])) {
-                                        return model.outJudgeResult.updateOne({
-                                            problem_number: obj.problem_number,
-                                            oj_id: obj.oj_id
-                                        });
-                                    }
-                                }).catch(err => {
-
-                            })
-                        };
-
                         for(let i = 0; i < arr.length; i++) {
                             if(drr[i] !== 'Accepted') continue;
                             if(crr[i] !== 'contest') continue;
-                            addAccept(arr[i]).catch(err => { console.log(err); });
+                            queueing(arr[i]).catch(err => {console.log(err)});
                         }
                         funcpage(cp).catch(err => { console.log(err); });
                     }
@@ -203,6 +229,8 @@ const funcodeforces = async function() {
 db.once('open', () => {
     model.user.find({}).then(result => {
         user_list = result;
+        qidx = 0;
+        queue.splice(0, queue.length);
 
         idxs = -1;
         funspoj(s).catch(err => { console.log(err); });
@@ -219,6 +247,8 @@ db.once('open', () => {
     setInterval(() => {
         model.user.find({}).then(result => {
             user_list = result;
+            qidx = 0;
+            queue.splice(0, queue.length);
 
             idxs = -1;
             funspoj(s).catch(err => { console.log(err); });
